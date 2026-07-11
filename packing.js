@@ -4,22 +4,28 @@
 // Returns grouped items so the checklist reads by reason.
 // ============================================================
 import { BASE_PACKING } from "./data.js";
+import { classifyDay, isWet } from "./weather.js";
 
-// Weather rules (per spec):
-//   rain gear if precip >= 40%
-//   layers   if low  < 45°F
-//   sun kit  if clear (code<=1) and high >= 70°F
+// Weather rules, driven by the same condition buckets as the verdict:
+//   wet (rain/drizzle) -> rain gear
+//   low < 45°F         -> layers
+//   clear & high ≥70°F -> sun kit  (overcast never triggers this)
+//   fog                -> headlamp + reflective leashes for the dogs
 function weatherItems(fc) {
   const items = [];
   const day = fc.sat || fc.sun;
   if (!day) return items;
-  const precip = Math.max(fc.sat?.precip ?? 0, fc.sun?.precip ?? 0);
+  const cSat = fc.sat ? classifyDay(fc.sat) : null;
+  const cSun = fc.sun ? classifyDay(fc.sun) : null;
+  const wet = isWet(cSat) || isWet(cSun);
+  const foggy = cSat === "fog" || cSun === "fog";
   const low = Math.min(fc.sat?.lo ?? 99, fc.sun?.lo ?? 99);
-  const clear = (fc.sat && fc.sat.code <= 1 && fc.sat.hi >= 70) ||
-                (fc.sun && fc.sun.code <= 1 && fc.sun.hi >= 70);
-  if (precip >= 40) items.push("Rain jackets", "Dry socks");
+  const clearHot = (cSat === "clear" && fc.sat.hi >= 70) ||
+                   (cSun === "clear" && fc.sun.hi >= 70);
+  if (wet) items.push("Rain jackets", "Dry socks");
   if (low < 45) items.push("Warm layers", "Beanie");
-  if (clear) items.push("Sunscreen", "Hats");
+  if (clearHot) items.push("Sunscreen", "Hats");
+  if (foggy) items.push("Headlamp", "Reflective leashes for the dogs");
   return items;
 }
 

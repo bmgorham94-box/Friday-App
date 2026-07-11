@@ -68,58 +68,111 @@ export function dayView(day) {
   return { ...day, icon, label };
 }
 
-// Rate a day for hiking: 'good' | 'ok' | 'poor'
-function rateDay(day) {
-  if (!day) return "ok";
-  if (day.precip >= 55 || day.code >= 61) return "poor";
-  if (day.precip >= 35 || day.lo < 38 || day.hi < 45) return "ok";
-  return "good";
+// ---- Condition classification (WMO code + precip) ----
+// The single source of truth for verdict, per-card fit, and packing rules.
+// Buckets: clear | partly | overcast | fog | drizzle | rain | unknown
+export function classifyDay(day) {
+  if (!day) return "unknown";
+  const { code, precip } = day;
+  if (code >= 63 || precip > 70) return "rain";                       // real rain
+  if ((code >= 51 && code <= 62) || (precip >= 40 && precip <= 70)) return "drizzle";
+  if (code === 45 || code === 48) return "fog";
+  if (code === 3) return "overcast";
+  if (code === 2) return "partly";
+  if (code <= 1 && precip < 20) return "clear";
+  if (code <= 1) return "partly";   // clear sky but a meaningful precip chance
+  return "overcast";
 }
 
-// Which slot the weather nudges toward + a plain-language verdict.
-// A = sunshine hike, B = bad-weather town, C = low-energy.
-export function decisionVerdict(fc) {
-  const sat = fc.sat, sun = fc.sun;
-  if (!sat && !sun) {
-    return { slot: "A", tone: "info", text: "No forecast yet — pick what sounds good." };
-  }
-  const best = sat || sun;
-  const rate = rateDay(best);
-  const dv = dayView(best) || {};
-  if (rate === "good") {
-    return {
-      slot: "A", tone: "good",
-      text: `Dry and ${dv.hi >= 70 ? "warm" : "mild"} Saturday (${dv.hi}°) — a good hiking day.`,
-    };
-  }
-  if (rate === "poor") {
-    return {
-      slot: "B", tone: "warn",
-      text: `Rain likely Saturday (${best.precip}% chance) — Option B looks better.`,
-    };
-  }
-  return {
-    slot: "C", tone: "info",
-    text: `Mixed skies (${best.precip}% rain) — an easy day travels well.`,
-  };
+export const isWet = (c) => c === "rain" || c === "drizzle";
+export const isNice = (c) => c === "clear" || c === "partly";
+
+// Verdict copy — a calm friend, dry humor, honest about the sky.
+// 2–3 variants per bucket, rotated deterministically by the week so a
+// given Friday reads the same on both phones but not the same as last week.
+const VERDICTS = {
+  clear:    { slot: "A", tone: "good", lines: [
+    "Actual sunshine. Option A was made for this.",
+    "Clear skies Saturday — the trail is the whole point today.",
+    "Bluebird weekend. A is the obvious move." ] },
+  partly:   { slot: "A", tone: "good", lines: [
+    "Sun's making appearances. Good enough for the trail.",
+    "Partly cloudy, mostly cooperative — A still wins.",
+    "A few clouds, nothing serious. Take the hike." ] },
+  overcast: { slot: "C", tone: "info", lines: [
+    "Cloudy but dry. No views today — but no crowds either.",
+    "Grey and dry. Fine for moving, thin on scenery.",
+    "Overcast all day. A works, just don't expect the vista." ] },
+  fog:      { slot: "C", tone: "info", lines: [
+    "Fog in the Gorge. Moody hike or cozy city day — dealer's choice.",
+    "Low fog around. Atmospheric on the trail, easy in town.",
+    "Socked in. Could go either way today." ] },
+  drizzle:  { slot: "B", tone: "warn", lines: [
+    "Light rain likely. Option B earns its keep this week.",
+    "Drizzle on and off — B is looking smart.",
+    "Damp one coming. B was built for this." ] },
+  rain:     { slot: "B", tone: "warn", lines: [
+    "Properly wet. This is exactly why Option B exists.",
+    "Real rain Saturday. Lean into B.",
+    "Soggy weekend. B, no question." ] },
+  unknown:  { slot: "A", tone: "info", lines: [
+    "No forecast yet — pick what sounds good.",
+    "Sky's a mystery today. Go with your gut." ] },
+};
+
+const HOT_LINES = [
+  "Hot one. Early start, or something with shade and cold drinks.",
+  "Heat's on. Beat it early or lean toward shade and water.",
+];
+
+// Stable per-week index from the Friday date string.
+function weekHash(weekOf) {
+  let h = 0;
+  const s = weekOf || "";
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function rotate(lines, weekOf) {
+  return lines[weekHash(weekOf) % lines.length];
+}
+
+// Considers both days, leads with Saturday. Recommended slot follows the
+// bucket (overcast is NOT an automatic hike promotion). Never claims a
+// condition that isn't in the forecast.
+export function decisionVerdict(fc, weekOf) {
+  const lead = fc.sat || fc.sun;
+  if (!lead) return { slot: "A", tone: "info", text: rotate(VERDICTS.unknown.lines, weekOf) };
+
+  const hiMax = Math.max(fc.sat?.hi ?? -99, fc.sun?.hi ?? -99);
+  if (hiMax >= 85) return { slot: "A", tone: "warn", text: rotate(HOT_LINES, weekOf) };
+
+  const cond = classifyDay(lead);
+  const bucket = VERDICTS[cond] || VERDICTS.unknown;
+  let text = rotate(bucket.lines, weekOf);
+
+  // Cold honesty, appended (unless already talking about heavy rain).
+  if (lead.hi < 45 && cond !== "rain") text += " Cold, too — layers are non-negotiable.";
+
+  return { slot: bucket.slot, tone: bucket.tone, text };
 }
 
 // Per-card weather-fit badge. Returns {kind:'good'|'warn'|'neutral', text}
 export function weatherFit(trip, fc) {
   const day = fc.sat || fc.sun;
   if (!day) return { kind: "neutral", text: "No forecast" };
-  const rate = rateDay(day);
+  const c = classifyDay(day);
   if (trip.type === "hike") {
-    if (rate === "good") return { kind: "good", text: "Great hiking weather" };
-    if (rate === "poor") return { kind: "warn", text: "Wet for a hike" };
-    return { kind: "neutral", text: "Hikeable, dress warm" };
+    if (isNice(c)) return { kind: "good", text: "Great hiking weather" };
+    if (isWet(c)) return { kind: "warn", text: "Wet for a hike" };
+    if (c === "fog") return { kind: "neutral", text: "Foggy — moody trail" };
+    return { kind: "neutral", text: "Dry, no views" };
   }
   if (trip.type === "town") {
-    if (rate === "poor") return { kind: "good", text: "Perfect rainy-day plan" };
-    if (rate === "good") return { kind: "neutral", text: "Nice, but sun's for hiking" };
+    if (isWet(c)) return { kind: "good", text: "Perfect rainy-day plan" };
+    if (isNice(c)) return { kind: "neutral", text: "Nice, but sun's for hiking" };
     return { kind: "good", text: "Weather-proof" };
   }
   // mixed / low-energy
-  if (rate === "poor") return { kind: "good", text: "Easy come rain or shine" };
+  if (isWet(c)) return { kind: "good", text: "Easy rain or shine" };
   return { kind: "neutral", text: "Works any weather" };
 }

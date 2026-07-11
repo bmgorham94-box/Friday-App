@@ -169,11 +169,19 @@ img { display: block; max-width: 100%; }
 }
 .card:active { transform: scale(.99); }
 .card.is-selected { border-color: var(--pine); box-shadow: var(--shadow-2); }
-.card.is-suggested::after {
-  content: "Weather pick"; position: absolute; top: 12px; left: 12px; z-index: 3;
-  background: rgba(20,32,27,.72); color: #fff; font-size: 11px; font-weight: 700;
-  letter-spacing: .03em; padding: 5px 9px; border-radius: 999px; backdrop-filter: blur(4px);
+
+/* Trip-type badge, top-left over the photo scrim. Greige at 90%, Inter/system 600. */
+.card__typebadge {
+  position: absolute; top: 12px; left: 12px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(243,237,226,.92); color: var(--ink);
+  font-size: 12px; font-weight: 600; letter-spacing: .01em;
+  padding: 5px 10px; border-radius: 999px; box-shadow: var(--shadow-1);
 }
+@media (prefers-color-scheme: dark) { .card__typebadge { background: rgba(34,50,41,.92); color: var(--ink); } }
+
+.chip--pick { background: var(--sky-soft); color: var(--sky); }
+.chip--wild { background: var(--warn-soft); color: var(--warn); }
 
 .card__photo {
   position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface-2);
@@ -456,6 +464,73 @@ img { display: block; max-width: 100%; }
 .a2hs strong { color: #fff; }
 .a2hs__close { margin-left: auto; border: none; background: transparent; color: var(--bg); font-size: 16px; min-width: 40px; min-height: 40px; }
 
+/* ============ WILDCARD BUTTON ============ */
+.wildcard-btn {
+  position: absolute; top: calc(var(--safe-t) + 8px); right: 12px; z-index: 25;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font-size: 22px; line-height: 1; display: grid; place-items: center; box-shadow: var(--shadow-1);
+}
+.wildcard-btn:active { transform: scale(.94); }
+
+/* ============ VARIETY NUDGE ============ */
+.variety-nudge {
+  margin: 12px 16px 0; padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+  background: var(--sky-soft); color: var(--sky); border-radius: var(--r-md); font-size: 14px; font-weight: 600;
+}
+.variety-nudge__x {
+  margin-left: auto; border: none; background: transparent; color: var(--sky);
+  min-width: 40px; min-height: 40px; font-size: 15px; flex: none;
+}
+
+/* ============ TYPE PICKER (library + wildcard) ============ */
+.type-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.type-pick__btn {
+  min-height: var(--tap); border: 1.5px solid var(--line); background: var(--surface);
+  border-radius: var(--r-sm); font-weight: 650; font-size: 13px; color: var(--ink-soft);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 4px;
+}
+.type-pick__btn[aria-pressed="true"] { border-color: var(--pine); background: var(--pine-soft); color: var(--pine); }
+
+/* ============ WILDCARD CARD + FLIP ============ */
+.wc-tag { font-size: 20px; }
+.wc-planter-note {
+  margin-top: 2px; padding: 10px 12px; background: var(--surface-2); color: var(--ink-soft);
+  border-radius: var(--r-md); font-size: 13.5px; font-weight: 600;
+}
+.wc-both-here {
+  text-align: center; font-size: 13px; font-weight: 700; color: var(--pine);
+  padding: 8px 0 2px; animation: fadeIn .3s ease;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* photo-area motif when a wildcard has no photo */
+.wc-motif {
+  width: 100%; height: 100%; background-color: var(--pine-soft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='none' stroke='%232E5E4E' stroke-opacity='0.18' stroke-width='2'%3E%3Cpath d='M8 46 L22 26 L36 46 Z'/%3E%3Ccircle cx='46' cy='22' r='7'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* flip container: two faces, 3D rotate with a spring settle */
+.wildcard-card--flip { position: relative; background: transparent; box-shadow: none; border-color: transparent; }
+.wc-flip {
+  position: relative; transform-style: preserve-3d;
+  transition: transform .52s cubic-bezier(.34, 1.35, .5, 1);
+}
+.wc-flip.is-flipped { transform: rotateY(180deg); }
+.wc-face { border-radius: calc(var(--r-lg) - 2px); overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.wc-face--back { position: relative; transform: rotateY(180deg); background: var(--surface); box-shadow: var(--shadow-1); }
+.wc-face--front { position: absolute; inset: 0; z-index: 2; background: var(--surface-2); box-shadow: var(--shadow-1); }
+
+.wc-back-face { position: absolute; inset: 0; display: grid; place-items: center; background: var(--surface-2); }
+.wc-motif--back {
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='none' stroke='%232E5E4E' stroke-opacity='0.16' stroke-width='2'%3E%3Cpath d='M8 46 L22 26 L36 46 Z'/%3E%3Ccircle cx='46' cy='22' r='7'/%3E%3C/g%3E%3C/svg%3E");
+}
+.wc-back-copy { position: relative; text-align: center; padding: 24px; }
+.wc-card-mark { font-size: 46px; line-height: 1; }
+.wc-back-line { font-weight: 800; font-size: 17px; color: var(--ink); margin-top: 10px; }
+.wc-back-hint { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-top: 6px; }
+
 /* ============ MOTION ============ */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
@@ -464,4 +539,10 @@ img { display: block; max-width: 100%; }
   .scrim { transition: opacity .18s ease; }
   .presence .pulse { animation: none; }
   .btn-cta:active, .card:active { transform: none; }
+
+  /* Wildcard reveal: crossfade the faces instead of a 3D flip. */
+  .wc-flip { transform: none !important; transition: none; }
+  .wc-face--back { transform: none; -webkit-backface-visibility: visible; backface-visibility: visible; }
+  .wc-face--front { -webkit-backface-visibility: visible; backface-visibility: visible; transition: opacity .2s ease; }
+  .wc-flip.is-flipped .wc-face--front { opacity: 0; }
 }
