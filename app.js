@@ -5,7 +5,7 @@
 // ============================================================
 import { createStore } from "./firestore.js";
 import { getWeather, weekendForecast, decisionVerdict } from "./weather.js";
-import { seedHousehold, freshCurrentWeekend, defaultProfile, MEMBERS } from "./data.js";
+import { seedHousehold, freshCurrentWeekend, defaultProfile, MEMBERS, wildcardAsTrip } from "./data.js";
 import { currentFriday, makeSlug } from "./util.js";
 import * as ui from "./ui.js";
 
@@ -113,8 +113,29 @@ function applySnapshot(doc) {
   };
   recomputeWeather();
   maybeRollover();
-  renderCurrent();
+  scheduleRender();
   rerenderSheetIfOpen();
+}
+
+// Defer a render while a wildcard flip is animating so an incoming snapshot
+// (e.g. our own optimistic reveal echoing back) doesn't cut the flip short.
+function scheduleRender() {
+  const wait = (state.wcAnimatingUntil || 0) - Date.now();
+  if (wait > 0) {
+    clearTimeout(scheduleRender._t);
+    scheduleRender._t = setTimeout(renderCurrent, wait);
+  } else {
+    renderCurrent();
+  }
+}
+
+// Decide whether the wildcard should animate a flip on this render.
+function computeWildcardAnim() {
+  const wc = state.household.currentWeekend.wildcard;
+  if (!wc) { state.wcPlantedAt = null; state.wcSeenRevealed = false; state._wcAnimate = false; return; }
+  if (wc.plantedAt !== state.wcPlantedAt) { state.wcPlantedAt = wc.plantedAt; state.wcSeenRevealed = false; }
+  const mine = wc.plantedBy === state.me;
+  state._wcAnimate = !!wc.revealed && !mine && !state.wcSeenRevealed;
 }
 
 function maybeRollover() {
@@ -144,7 +165,7 @@ function recomputeWeather() {
   if (!state.weather || !state.household) return;
   const fri = state.household.currentWeekend?.weekOf || currentFriday();
   state.fc = weekendForecast(state.weather, fri);
-  state.verdict = decisionVerdict(state.fc);
+  state.verdict = decisionVerdict(state.fc, fri);
 }
 
 // ---------------- mutations ----------------
@@ -173,7 +194,9 @@ const handlers = {
   },
 
   onOpenDetail(tripId) {
-    const trip = state.household.trips.find((t) => t.id === tripId);
+    const trip = tripId === "wildcard"
+      ? wildcardAsTrip(state.household.currentWeekend.wildcard)
+      : state.household.trips.find((t) => t.id === tripId);
     if (!trip) return;
     state.sheet = "detail";
     state.sheetTripId = tripId;
@@ -210,6 +233,45 @@ const handlers = {
   onChangePlan() {
     mutateWeekend({ lockedBy: null, lockedAt: null });
     renderCurrent();
+  },
+
+  // ----- wildcard -----
+  onOpenPlantWildcard() {
+    if (!state.me) { openWhoAreYou(); return; }
+    state.sheet = "plant";
+    ui.openSheet(ui.wildcardPlantSheet(state, handlers), () => (state.sheet = null));
+  },
+
+  onPlantWildcard(data) {
+    const wildcard = {
+      title: data.title,
+      note: data.note || "",
+      photoUrl: data.photoUrl || null,
+      type: data.type || null,
+      plantedBy: state.me,
+      plantedAt: Date.now(),
+      revealed: false,
+      revealedAt: null,
+    };
+    // A brand-new wildcard: reset the reveal-animation bookkeeping.
+    state.wcPlantedAt = wildcard.plantedAt;
+    state.wcSeenRevealed = false;
+    mutateWeekend({ wildcard });
+    ui.closeSheet();
+    renderCurrent();
+    ui.toast("Wildcard planted 🃏");
+  },
+
+  onFlipWildcard() {
+    const wc = state.household.currentWeekend.wildcard;
+    if (!wc || wc.revealed) return;
+    // The card's own click handler is already animating the flip. Guard the
+    // flip window so the echoing snapshot doesn't rebuild mid-animation, and
+    // mark it seen so the settle render doesn't re-trigger the animation.
+    state.wcSeenRevealed = true;
+    state.wcAnimatingUntil = Date.now() + 560;
+    mutateWeekend({ wildcard: { ...wc, revealed: true, revealedAt: Date.now() } });
+    setTimeout(renderCurrent, 560); // settle into the selectable state
   },
 
   onOpenPacking() {
@@ -280,11 +342,16 @@ const handlers = {
 // ---------------- render dispatch ----------------
 function renderCurrent() {
   if (!state.household) return;
+  computeWildcardAnim();
   if (state.screen === "home") ui.renderHome(state, handlers);
   else if (state.screen === "library") ui.renderLibrary(state, handlers);
   else if (state.screen === "settings") ui.renderSettings(state, handlers);
   // hide the home CTA anywhere but home
   if (state.screen !== "home") document.getElementById("ctaBar").hidden = true;
+  // one-shot flags: mark the reveal as seen so it doesn't re-animate
+  const wc = state.household.currentWeekend.wildcard;
+  if (wc && wc.revealed) state.wcSeenRevealed = true;
+  state._wcAnimate = false;
 }
 
 function rerenderSheetIfOpen() {
@@ -305,6 +372,8 @@ function wireNav() {
   document.querySelectorAll("[data-nav]").forEach((b) =>
     b.addEventListener("click", () => showScreen(b.dataset.nav))
   );
+  // Deferred handlers access (runs at click time, after module init).
+  document.getElementById("wildcardBtn").addEventListener("click", () => handlers.onOpenPlantWildcard());
 }
 function showScreen(name) {
   state.screen = name;

@@ -5,6 +5,32 @@ import { uid, addMinutesToClock, driveLabel } from "./util.js";
 
 export const MEMBERS = ["Brandon", "Joey"];
 
+// Trip-type badges shown on cards + used in the Library editor.
+export const TYPE_BADGES = {
+  hike:  { emoji: "🥾", label: "Trail" },
+  town:  { emoji: "🏙", label: "City day" },
+  mixed: { emoji: "🌤", label: "Bit of both" },
+};
+
+// A planted wildcard is rendered like a trip so selection / lock / packing
+// all work through the same code paths. It carries no drive/cost of its own.
+export function wildcardAsTrip(wc) {
+  if (!wc) return null;
+  return {
+    id: "wildcard",
+    name: wc.title || "Wildcard",
+    type: wc.type || "mixed",
+    slot: "★",
+    whyLine: wc.note || "",
+    photoUrl: wc.photoUrl || "",
+    driveMinutes: null,
+    costEstimate: 0,
+    packingExtras: [],
+    dogNotes: "",
+    isWildcard: true,
+  };
+}
+
 // -------- Default profile (Portland couple + two dogs) --------
 export function defaultProfile() {
   return {
@@ -73,6 +99,7 @@ export function freshCurrentWeekend(weekOf) {
     lockedAt: null,
     updatedAt: 0,
     packingChecked: {},
+    wildcard: null,
   };
 }
 

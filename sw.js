@@ -6,7 +6,7 @@
 // requests here (let the SDK manage them).
 // Bump CACHE on any shell change to invalidate old caches.
 // ============================================================
-const CACHE = "friday-shell-v1";
+const CACHE = "friday-shell-v2";
 
 const SHELL = [
   "./",

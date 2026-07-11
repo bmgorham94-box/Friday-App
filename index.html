@@ -32,6 +32,7 @@
 
       <!-- Weather strip -->
       <header id="weatherStrip" class="weather-strip" aria-label="Weekend weather">
+        <button id="wildcardBtn" class="wildcard-btn" type="button" aria-label="Plant a wildcard" hidden>🃏</button>
         <div class="weather-strip__inner">
           <div class="weather-loading">Checking the skies…</div>
         </div>
@@ -45,6 +46,9 @@
 
       <!-- The three cards -->
       <section id="cards" class="cards" aria-label="Trip options"></section>
+
+      <!-- Variety nudge (all-same-type) -->
+      <div id="varietyNudge" class="variety-nudge" hidden></div>
 
       <!-- Empty state (no trips yet) -->
       <section id="emptyState" class="empty" hidden></section>
