@@ -1,0 +1,18 @@
+{
+  "name": "Friday Decider",
+  "short_name": "Friday",
+  "description": "Pick your weekend trip in under a minute.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF7F0",
+  "theme_color": "#FBF7F0",
+  "categories": ["lifestyle", "travel", "utilities"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
