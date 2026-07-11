@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Friday Decider — pick your weekend trip in under a minute." />
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Friday" />
+  <meta name="theme-color" content="#FBF7F0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#14201B" media="(prefers-color-scheme: dark)" />
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+
+  <title>Friday Decider</title>
+</head>
+<body>
+  <!-- ============ APP ROOT ============ -->
+  <div id="app" aria-live="polite">
+
+    <!-- Sync / connection ribbon (hidden by default) -->
+    <div id="ribbon" class="ribbon" hidden></div>
+
+    <!-- ============ HOME: FRIDAY DECIDER ============ -->
+    <main id="screen-home" class="screen" data-screen="home">
+
+      <!-- Weather strip -->
+      <header id="weatherStrip" class="weather-strip" aria-label="Weekend weather">
+        <div class="weather-strip__inner">
+          <div class="weather-loading">Checking the skies…</div>
+        </div>
+      </header>
+
+      <!-- Presence line -->
+      <div id="presence" class="presence" hidden></div>
+
+      <!-- Locked banner (shown when the weekend is locked) -->
+      <section id="lockedBanner" class="locked" hidden aria-live="polite"></section>
+
+      <!-- The three cards -->
+      <section id="cards" class="cards" aria-label="Trip options"></section>
+
+      <!-- Empty state (no trips yet) -->
+      <section id="emptyState" class="empty" hidden></section>
+
+      <div class="home-footer-space" aria-hidden="true"></div>
+    </main>
+
+    <!-- Sticky bottom CTA -->
+    <div id="ctaBar" class="cta-bar" hidden>
+      <button id="lockBtn" class="btn-cta" type="button" disabled>
+        <span id="lockBtnLabel">Pick a trip</span>
+      </button>
+    </div>
+
+    <!-- ============ LIBRARY SCREEN ============ -->
+    <main id="screen-library" class="screen" data-screen="library" hidden>
+      <div class="page-head">
+        <h1>Trip Library</h1>
+        <button class="btn-ghost" data-nav="home" type="button">Done</button>
+      </div>
+      <div id="libraryList" class="library-list"></div>
+      <button id="addTripBtn" class="btn-outline btn-block" type="button">+ Add a trip</button>
+      <div class="page-space" aria-hidden="true"></div>
+    </main>
+
+    <!-- ============ SETTINGS SCREEN ============ -->
+    <main id="screen-settings" class="screen" data-screen="settings" hidden>
+      <div class="page-head">
+        <h1>Settings</h1>
+        <button class="btn-ghost" data-nav="home" type="button">Done</button>
+      </div>
+      <div id="settingsBody"></div>
+      <div class="page-space" aria-hidden="true"></div>
+    </main>
+
+    <!-- ============ BOTTOM NAV ============ -->
+    <nav id="tabbar" class="tabbar" aria-label="Sections">
+      <button class="tab" data-nav="home" aria-current="page" type="button">
+        <span class="tab__glyph" aria-hidden="true">◎</span><span class="tab__label">Friday</span>
+      </button>
+      <button class="tab" data-nav="library" type="button">
+        <span class="tab__glyph" aria-hidden="true">▤</span><span class="tab__label">Library</span>
+      </button>
+      <button class="tab" data-nav="settings" type="button">
+        <span class="tab__glyph" aria-hidden="true">⚙</span><span class="tab__label">Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============ BOTTOM SHEET (single reusable) ============ -->
+  <div id="sheetScrim" class="scrim" hidden></div>
+  <section id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-label="Details">
+    <div class="sheet__handle" id="sheetHandle" role="button" tabindex="0" aria-label="Close sheet"></div>
+    <div id="sheetBody" class="sheet__body"></div>
+  </section>
+
+  <!-- ============ TOAST ============ -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- ============ FIRST-RUN / A2HS HINT ============ -->
+  <div id="a2hs" class="a2hs" hidden>
+    <span>Add to Home Screen: tap <strong>Share</strong> → <strong>Add to Home Screen</strong></span>
+    <button id="a2hsClose" class="a2hs__close" type="button" aria-label="Dismiss">✕</button>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// ============================================================
+// Friday Decider — Firestore security rules
+// ------------------------------------------------------------
+// Access model: NO login/auth. This is a two-person personal
+// tool. Access control is a shared household slug that lives in
+// the URL, plus these rules that pin every read/write to a
+// document under /households/{householdId} and deny everything
+// else. Obscurity + these rules is acceptable for this scope.
+//
+// Deploy:  firebase deploy --only firestore:rules
+//   (or paste into Firebase console -> Firestore -> Rules)
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only these four top-level fields are allowed on a household
+    // doc — keeps a leaked slug from being used to write junk and
+    // burn the free Spark quota.
+    function validShape() {
+      return request.resource.data.keys().hasOnly(
+        ['profile', 'trips', 'currentWeekend', 'presence']
+      );
+    }
+
+    // The only reachable collection. A household doc is only
+    // reachable if you know its random, shared-once slug.
+    match /households/{householdId} {
+      allow read: if true;
+      allow create, update: if householdId.size() >= 6 && validShape();
+      allow delete: if false;
+
+      // No subcollections — all state lives in the one doc.
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // Everything outside /households is denied by default.
+  }
+}
