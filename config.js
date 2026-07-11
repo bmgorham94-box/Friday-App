@@ -13,12 +13,13 @@
 // ============================================================
 
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID",
+  apiKey: "AIzaSyAOnfceSpWymfNcIwvceR45Sq0R37uceOI",
+  authDomain: "friday-18134.firebaseapp.com",
+  projectId: "friday-18134",
+  storageBucket: "friday-18134.firebasestorage.app",
+  messagingSenderId: "333876918078",
+  appId: "1:333876918078:web:5c382062005f8cfed05e6f",
+  measurementId: "G-L5VZC3WT2M",
 };
 
 // True when the config above is still the placeholder.
